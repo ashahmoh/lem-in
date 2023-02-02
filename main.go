@@ -18,7 +18,7 @@ type room struct {
 }
 
 func readFile(fname string) []string {
-	file, _ := os.Open(fname)
+	file, _ := os.Open(os.Args[1])
 	scanned := bufio.NewScanner(file)
 	scanned.Split(bufio.ScanLines)
 
@@ -112,19 +112,20 @@ func contains(rList []*room, rname string) bool {
 }
 
 func main() {
-	ourFarm := &antFarm{}
+	// ourFarm := &antFarm{}
 
-	i := readFile("test.txt")
-	// fmt.Println(i)
-	for _, val := range i {
-		ourFarm.addRoom(val)
-	}
+	// readfile from arg
+	file := readFile(os.Args[1])
 
-	//practice: see if error checks are working (with own test file)
-	ourFarm.addTunnel("##starot", "##end")
-	ourFarm.addTunnel("##start", "##end")
-	ourFarm.addTunnel("##start", "##end")
-	ourFarm.addTunnel("##start", "##end")
-	ourFarm.showRooms()
+	// for _, val := range file {
+	// 	ourFarm.addRoom(val)
+	// }
+	// 1. print to screen: number of ants (file index[0])
+	fmt.Print("Number of ants: ", string(file[0]), "\n")
 
+	// 2. print to screen the rooms- strings followed by coordinates
+	// 3. print to screen the links: rooms with - between them
+
+	//4. print farm
+	// ourFarm.showRooms()
 }
