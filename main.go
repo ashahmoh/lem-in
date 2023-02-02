@@ -120,6 +120,7 @@ func main() {
 		ourFarm.addRoom(val)
 	}
 
+	//practice: see if error checks are working (with own test file)
 	ourFarm.addTunnel("##starot", "##end")
 	ourFarm.addTunnel("##start", "##end")
 	ourFarm.addTunnel("##start", "##end")
