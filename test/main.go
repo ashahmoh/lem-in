@@ -33,6 +33,7 @@ func readFile(fname string) []string {
 	return lines
 }
 
+// TO DO: put the add room bits from func main into here.
 func (f *antFarm) addRoom(rname string) {
 	//first place statement to check whether a room in the antFarm has is a certain room with a certain name(
 	///check a certain room is in the antFarm under a certian name:
