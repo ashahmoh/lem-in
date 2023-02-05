@@ -37,13 +37,13 @@ func (f *antFarm) addRoom(rname string) {
 	//first place statement to check whether a room in the antFarm has is a certain room with a certain name(
 	///check a certain room is in the antFarm under a certian name:
 	//if statement is true, means antFarm already has that certain room
-	// file := readFile(os.Args[1])
+	// file := readFile(os.Args[1]
 
 	if contains(f.Rooms, rname) {
-		err := fmt.Errorf("room %v not added as room already exists", rname)
-		fmt.Println(err.Error())
+		// 	err := fmt.Errorf("room %v not added as room already exists", rname)
+		// 	fmt.Println(err.Error())
 
-	} else {
+		// } else {
 		//create a room that has k as the name --> "&room{name: k}"
 		//append k to the rooms list in the antFarm (Rooms field) --> f.Rooms = append(f.Rooms, &room{name: k})
 		f.Rooms = append(f.Rooms, &room{Name: rname})
@@ -63,29 +63,38 @@ func contains(rList []*room, rname string) bool {
 }
 
 func main() {
-	// file := readFile(os.Args[1])
-	allAnts()
-	theRooms()
-
-	// t := room{Name: theWords}
-
-}
-
-// read through file and return room names
-func theRooms() {
 	file := readFile(os.Args[1])
-	var theWords string
+
+	ourFarm := &antFarm{}
+	var therooms string
+	//step 1: read from file,
+	//step 2: remove coordinates
+	//step three save each name at index as room name.
+	//step 4: add room to antfarm!
 	for _, v := range file[1:] {
 		if !strings.Contains(v, "-") && strings.Contains(string(v), " ") {
+			//step 2:
 			words := strings.Fields(string(v))
-			theWords = words[0]
-
-			fmt.Println(string(theWords))
+			therooms = words[0]
+			ourFarm.Rooms = append(ourFarm.Rooms, &room{Name: therooms})
 
 		}
 
 	}
 
+	ourFarm.showRooms()
+}
+
+func (f *antFarm) showRooms() {
+	for _, val := range f.Rooms {
+		//print out the name for each room
+		fmt.Printf("\nRoom: %v", val.Name)
+		//another loop that can print out ALL the rooms inside the adjacency lsit
+		for _, val := range val.Tunnel {
+			fmt.Printf(" %v", val.Name)
+		}
+	}
+	fmt.Println()
 }
 
 func allAnts() {

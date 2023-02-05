@@ -88,7 +88,7 @@ func (f *antFarm) addTunnel(from, to string) {
 		fromRoom.Tunnel = append(fromRoom.Tunnel, toRoom)
 	}
 
-}
+}                       
 
 // getRoom return a pointer to the room with a name string
 func (f *antFarm) getRoom(name string) *room {
