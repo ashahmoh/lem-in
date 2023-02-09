@@ -1,0 +1,58 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+func main() {
+
+	file := []string{"1000",
+		"##start",
+		"richard 0 6",
+		"gilfoyle 6 3",
+		"erlich 9 6",
+		"dinish 6 9",
+		"jimYoung 11 7",
+		"##end",
+		"peter 14 6",
+		"richard-dinish",
+		"dinish-jimYoung",
+		"richard-gilfoyle",
+		"gilfoyle-peter",
+		"gilfoyle-erlich",
+		"richard-erlich",
+		"erlich-jimYoung",
+		"jimYoung-peter",
+	}
+	all := remDash(file)
+	//allslice := strings.Split(all, " ")
+
+	var toRoom string
+	var fromRoom string
+	for i := 0; i < len(all); i++ {
+		fromRoom = append(fromRoom, i[0])
+		toRoom = string(all[1])
+
+	}
+	fmt.Println("From", fromRoom)
+	fmt.Println("To", toRoom)
+
+}
+func remDash(str []string) string {
+	var res1 string
+	for _, v := range str[1:] {
+		if strings.Contains(v, "-") {
+			var theRooms []string
+			theRooms = append(theRooms, v)
+			for _, v := range theRooms {
+				res1 = strings.Replace(v, "-", " ", 1)
+				fmt.Println(res1)
+			}
+
+		}
+
+	}
+
+	return res1
+}

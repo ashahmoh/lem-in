@@ -98,6 +98,25 @@ func (f *antFarm) showRooms() {
 	fmt.Println()
 }
 
+//removes "-" and replaces with whitespace
+func remDash(str []string) string {
+	var res1 string
+	for _, v := range str[1:] {
+		if strings.Contains(v, "-") {
+			var theRooms []string
+
+			theRooms = append(theRooms, v)
+			for _, v := range theRooms {
+				res1 = strings.Replace(v, "-", " ", 1)
+				fmt.Println(res1)
+			}
+
+		}
+
+	}
+
+	return res1
+}
 func allAnts() {
 	file := readFile(os.Args[1])
 	ant := file[0]
