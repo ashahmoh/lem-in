@@ -35,8 +35,7 @@ func readFile(fname string) []string {
 
 // this method adds to the graph- creates the graph: has a receiver to the graph(pointer to graph struct) and takes in the name of the room(the key)
 func (f *antFarm) addRoom(rname string) {
-	//first place statement to check whether a room in the antFarm has is a certain room with a certain name(
-	///check a certain room is in the antFarm under a certian name:
+	//check a certain room is in the antFarm under a certian name:
 	//if statement is true, means antFarm already has that certain room
 	if contains(f.Rooms, rname) {
 		err := fmt.Errorf("room %v not added as room already exists", rname)
@@ -74,6 +73,7 @@ func (f *antFarm) addTunnel(from, to string) {
 	//get room at index??
 	fromRoom := f.getRoom(from)
 	toRoom := f.getRoom(to)
+	
 
 	// 2. error check to filter (e.g if tunnel already exists or if trying to add to tunnel that doesn't)
 	// 2.1 check if room actually exists: so if getRoom method returns nil, we will return error as it means we are trying to add tunnels to rooms that do not exist!:
@@ -122,4 +122,23 @@ func main() {
 	// 1. print to screen: number of ants (file index[0])
 	fmt.Print(string(file[0]), "\n")
 
+}
+
+func remDash(str []string) string {
+	var res1 string
+	for _, v := range str[1:] {
+		if strings.Contains(v, "-") {
+			var theRooms []string
+
+			theRooms = append(theRooms, v)
+			for _, v := range theRooms {
+				res1 = strings.Replace(v, "-", " ", 1)
+				fmt.Println(res1)
+			}
+
+		}
+
+	}
+
+	return res1
 }
