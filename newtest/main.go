@@ -114,13 +114,15 @@ func contains(rList []*room, rname string) bool {
 //define path and define room
 
 func main() {
-	// ourFarm := &antFarm{}
+	ourFarm := &antFarm{}
 
 	// readfile from arg
 	file := readFile(os.Args[1])
 
 	// 1. print to screen: number of ants (file index[0])
 	fmt.Print(string(file[0]), "\n")
+	ourFarm.showRooms()
+
 
 }
 
