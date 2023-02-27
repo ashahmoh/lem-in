@@ -213,12 +213,12 @@ func DFS(r *room, f antFarm) {
 	} else {
 		if len(startRoom.Tunnel) > 1 && !contains(startRoom.Tunnel, endRoom.Name) {
 			visitedList = append(visitedList, r.Name)
-			fmt.Printf("1stvisitedList %v", visitedList)
+			fmt.Printf("Visited List %v", visitedList)
 			startRoom.Tunnel = f.startRoom().Tunnel[1:][:]
 			DFS(startRoom, antFarm{f.Rooms})
 		} else {
 			visitedList = append(visitedList, r.Name)
-			fmt.Printf("2ndvisitedList %v\n", visitedList)
+			fmt.Printf("Visited %v\n", visitedList)
 			fmt.Println("start", startRoom.Name, "end", endRoom.Name)
 		}
 	}
