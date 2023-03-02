@@ -14,9 +14,12 @@ type antFarm struct {
 }
 
 type room struct {
-	Id     int
-	Name   string
-	Tunnel []*room //adjacent vertex (neighbours)
+	Id      int
+	Name    string
+	Tunnel  []*room //adjacent vertex (neighbours)
+	visited bool
+	Path    []*room
+	Ants    int
 }
 
 var (
@@ -29,18 +32,18 @@ var (
 )
 
 func (f *antFarm) showRooms() {
-
-	for _, val := range f.Rooms {
-		fmt.Printf("\nRoom: %v", val.Name)
-		for _, val := range val.Tunnel {
-			fmt.Printf(" %v", val.Name)
-		}
-
-	}
-	fmt.Println()
+	//file := readFile(os.Args[1])
 	f.startRoom()
 	f.endRoom()
 	fmt.Println()
+
+	for _, v := range f.Rooms {
+		fmt.Printf("\nRoom %v: ", v.Name)
+		for _, v := range v.Tunnel {
+			fmt.Printf("%v ", v.Name)
+		}
+	}
+
 }
 
 func contains(rList []*room, rname string) bool {
@@ -82,7 +85,6 @@ func (f *antFarm) addTunnel(from, to string) {
 		os.Exit(0)
 	} else if fromRoom.Name == f.endRoom().Name {
 		toRoom.Tunnel = append(toRoom.Tunnel, fromRoom)
-
 	} else if toRoom.Name == f.startRoom().Name {
 		toRoom.Tunnel = append(toRoom.Tunnel, fromRoom)
 	} else {
@@ -130,7 +132,7 @@ func (f *antFarm) startRoom() *room {
 			if strings.Contains(start, " ") {
 				words := strings.Fields(start)
 				start = words[0]
-				fmt.Printf("\nStart: %v\n", start)
+				//fmt.Printf("\nStart: %v\n", start)
 			}
 
 		}
@@ -150,7 +152,7 @@ func (f *antFarm) endRoom() *room {
 			if strings.Contains(end, " ") {
 				words := strings.Fields(end)
 				end = words[0]
-				fmt.Printf("End: %v\n", end)
+				//fmt.Printf("End: %v\n", end)
 			}
 
 		}
@@ -160,51 +162,30 @@ func (f *antFarm) endRoom() *room {
 
 }
 
-func getEnd() string {
-	var end string
-	file := readFile(os.Args[1])
+func (r *room) dfs(end *room, path []*room, paths map[int][]*room, visited map[*room]bool) {
+	// v == current
+	visited[r] = true      // marks current vertex as visited
+	path = append(path, r) // append current to path
 
-	for i := range file {
-		if file[i] == "##end" {
-			end = strings.Split(string(file[i+1]), " ")[0]
-		}
-	}
-	return end
-}
-func (f *antFarm) dfs(current, end *room, visited []bool, path []*room, paths *[][]*room) {
-	// Mark the current room as visited
-	visited[current.Id] = true
-
-	// Add the current room to the path
-	path = append(path, current)
-
-	// If the current room is the end room, add the path to the list of all paths
-	if current == end {
-		pathCopy := make([]*room, len(path))
-		copy(pathCopy, path)
-		*paths = append(*paths, pathCopy)
+	if r == end {
+		// Found a path from start to end
+		length := len(paths)
+		paths[length] = path
 	} else {
-		// Recursively search the neighbours of the current room
-		for _, neighbour := range current.Tunnel {
-			if !visited[neighbour.Id] {
-				f.dfs(neighbour, end, visited, path, paths)
+		for _, tunnel := range r.Tunnel {
+			if !visited[tunnel] {
+				tunnel.dfs(end, path, paths, visited)
 			}
 		}
 	}
-
-	// Backtrack by removing the current room from the path
-	path = path[:len(path)-1]
-
-	// Mark the current room as not visited
-	visited[current.Id] = false
+	// Remove v from the current path and visited set to backtrack
+	delete(visited, r)
 }
 
 func main() {
-
-	ourFarm := &antFarm{}
-
 	file := readFile(os.Args[1])
 	printAnts(file)
+	ourFarm := &antFarm{}
 
 	for _, v := range file[1:] {
 		if !strings.Contains(v, "-") && strings.Contains(string(v), " ") {
@@ -226,13 +207,17 @@ func main() {
 			from = words[0]
 			to = words[1]
 			fmt.Println("from:", from, "	to:", to)
+			ourFarm.addTunnel(from, to)
 
 		}
 
 	}
-	fmt.Println("tunnel:", ourFarm.startRoom().Tunnel)
-	ourFarm.addTunnel(from, to)
+
+	// start := ourFarm.startRoom()
+	// end := ourFarm.endRoom()
+	// start.dfs(end)
 
 	ourFarm.showRooms()
+	fmt.Println()
 
 }
