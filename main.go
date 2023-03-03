@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -14,21 +15,31 @@ type antFarm struct {
 }
 
 type room struct {
-	Id      int
-	Name    string
-	Tunnel  []*room //adjacent vertex (neighbours)
-	visited bool
-	Path    []*room
-	Ants    int
+	//Id     int
+	Name     string
+	Tunnel   []*room //adjacent vertex (neighbours)
+	Visited  bool
+	Path     []*room
+	Occupied bool
+}
+
+type Ants struct {
+	antz []*Ant
+}
+
+type Ant struct {
+	Name        string
+	Path        []*room
+	CurrentRoom room
 }
 
 var (
-	from     string
-	to       string
-	therooms string
-	//pathSlice [][]*room
-// 	thePaths [][]*room
-// 	endRoom  = getEnd()
+	from       string
+	to         string
+	therooms   string
+	validPaths [][]*room
+	dfsPaths   [][]*room
+	bfsPaths   [][]*room
 )
 
 func (f *antFarm) showRooms() {
@@ -115,8 +126,8 @@ func printAnts(fname []string) int {
 		fmt.Println(err.Error())
 	}
 	theAnts, _ := strconv.Atoi(string(ant))
-	fmt.Println("\nNumber of Ants:", theAnts)
-	fmt.Println()
+	// fmt.Println(theAnts)
+	// fmt.Println()
 
 	return theAnts
 }
@@ -162,62 +173,422 @@ func (f *antFarm) endRoom() *room {
 
 }
 
-func (r *room) dfs(end *room, path []*room, paths map[int][]*room, visited map[*room]bool) {
-	// v == current
-	visited[r] = true      // marks current vertex as visited
-	path = append(path, r) // append current to path
-
-	if r == end {
-		// Found a path from start to end
-		length := len(paths)
-		paths[length] = path
+func DFS(r *room, f antFarm) {
+	//sRoom := f.startRoom().Name
+	eRoom := f.endRoom().Name
+	// set the room being checked visited status to true
+	if r.Name != f.endRoom().Name {
+		r.Visited = true
+		// range through the neighbours of the r
+		for _, nbr := range r.Tunnel {
+			if !nbr.Visited {
+				/* for each neighbour that hasn't been visited,
+				- append their key to the visited slice,
+				- then apply dfs to them recursively,
+				- then append their key to their path value
+				*/
+				nbr.Path = append(r.Path, nbr)
+				if contains(nbr.Path, eRoom) {
+					dfsPaths = append(dfsPaths, nbr.Path)
+				}
+				DFS(nbr, antFarm{f.Rooms})
+			}
+		}
 	} else {
-		for _, tunnel := range r.Tunnel {
-			if !visited[tunnel] {
-				tunnel.dfs(end, path, paths, visited)
+		if len(f.startRoom().Tunnel) > 1 && !contains(f.startRoom().Tunnel, eRoom) {
+			f.startRoom().Tunnel = f.startRoom().Tunnel[1:][:]
+			DFS(f.startRoom(), antFarm{f.Rooms})
+		} else {
+		}
+	}
+	dfsPaths = PathDupeCheck(dfsPaths)
+
+}
+
+func PathDupeCheck(path [][]*room) [][]*room {
+
+	dataMap := make(map[*room][]*room)
+
+	for _, item := range path {
+		if value, ok := dataMap[item[0]]; !ok {
+			dataMap[item[0]] = item
+		} else {
+			if len(item) <= len(value) {
+				dataMap[item[0]] = item
+
 			}
 		}
 	}
-	// Remove v from the current path and visited set to backtrack
-	delete(visited, r)
+
+	var output [][]*room
+
+	for _, value := range dataMap {
+		output = append(output, value)
+	}
+
+	return output
+}
+
+func BFS(r *room, f antFarm) {
+
+	var vPaths [][]*room
+
+	//queue variable, procedurally populated with rooms yet to be visited
+	var queue []*room
+
+	//set start room as visited
+	r.Visited = true
+
+	//initialise queue with start room
+	queue = append(queue, r)
+
+	// }
+
+	// checks if there is a link between start and end directly
+	for i, v := range f.startRoom().Tunnel {
+		if v.Name == f.endRoom().Name {
+			f.endRoom().Path = append(f.endRoom().Path, f.startRoom())
+			vPaths = append(vPaths, f.endRoom().Path)
+			f.startRoom().Tunnel = append(f.startRoom().Tunnel[:i], f.startRoom().Tunnel[i+1:]...)
+		}
+
+	}
+
+	//checks the queue for the end room and if the queue is not empty
+
+	for !contains(queue, f.endRoom().Name) && len(queue) >= 1 {
+		qfront := queue[0]
+
+		for _, room := range qfront.Tunnel {
+			if !room.Visited {
+				room.Visited = true
+				room.Path = append(qfront.Path, room)
+				//
+				queue = append(queue, room)
+			}
+
+		}
+
+		queue = queue[1:]
+
+		if doesContainRoom(queue, f.endRoom().Name) {
+
+			for _, room := range f.Rooms {
+				room.Visited = false
+			}
+			vPaths = append(vPaths, qfront.Path)
+
+			for _, r := range qfront.Path {
+				removeTunnel(r, f)
+
+			}
+			if len(f.startRoom().Tunnel) == 0 {
+
+				break
+			}
+
+			if len(f.startRoom().Tunnel) >= 1 {
+				for _, froom := range f.startRoom().Tunnel {
+					for _, sroom := range froom.Tunnel {
+						if sroom.Name != f.endRoom().Name {
+							break
+						} else {
+							BFS(f.startRoom(), antFarm{f.Rooms})
+							queue = queue[1:]
+						}
+					}
+				}
+			}
+			BFS(f.startRoom(), antFarm{f.Rooms})
+
+		}
+	}
+	for _, v := range vPaths {
+		v = append(v, f.endRoom())
+		bfsPaths = append(bfsPaths, v)
+	}
+	bfsPaths = PathDupeCheck(bfsPaths)
+
+}
+
+// delete edge from starting room
+func removeTunnel(r *room, f antFarm) {
+	for i := 0; i < len(r.Path); i++ {
+		for _, room := range f.Rooms {
+			//	for _ , edge := range room.Tunnel
+			for j := 0; j < len(room.Tunnel); j++ {
+				if room.Tunnel[j] == r.Path[i] {
+					room.Tunnel = remove(room.Tunnel, r.Name)
+				}
+			}
+		}
+	}
+}
+
+// removes a string from a slice (unordered)
+func remove(s []*room, k string) []*room {
+	for i := 0; i < len(s); i++ {
+		if s[i].Name == k {
+			s[i] = s[len(s)-1]
+
+		}
+
+	}
+	return s[:len(s)-1]
+}
+
+func doesContainRoom(sl []*room, s string) bool {
+
+	for _, word := range sl {
+		if s == word.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func lowestInt(a [][]int, b [][]*room) (int, []*room) {
+
+	min := 10000
+	var path []*room
+
+	for i := 0; i < len(a); i++ {
+		if a[i][0] < min {
+			min = a[i][0]
+			path = b[i]
+
+		}
+
+	}
+	return min, path
+}
+
+// increments the zero index for the given array
+func Increment(a [][]int, b int) [][]int {
+
+	for _, slice := range a {
+		if slice[0] == b {
+			slice[0] += 1
+			break
+		}
+	}
+	return a
+
+}
+
+func RemoveAnt(a []*Ant, b *Ant) []*Ant {
+	ret := make([]*Ant, 0)
+	if len(a) == 1 {
+		return []*Ant{}
+	}
+	for i := 0; i < len(a); i++ {
+		if a[i].Name == b.Name {
+			ret = append(ret, a[:i]...)
+			ret = append(ret, a[i+1:]...)
+		}
+	}
+	return ret
+}
+
+func pathSlice(a [][]*room) [][]int {
+	var slice [][]int
+	var s []int
+
+	for i := range a {
+		s = append(s, len(a[i]))
+		slice = append(slice, s)
+		s = []int{}
+	}
+
+	return slice
+}
+
+func Reassign(a [][]*room) [][]*room {
+
+	sort.Slice(a, func(i, j int) bool {
+		return len(a[i]) < len(a[j])
+	})
+
+	return a
+
+}
+
+// returns the optimal path between bfs & dfs algos
+func PathSelection(bfs [][]*room, dfs [][]*room) [][]*room {
+
+	bfsPathNum := len(bfs)
+	dfsPathNum := len(dfs)
+
+	if bfsPathNum > dfsPathNum {
+		validPaths = append(validPaths, bfsPaths...)
+	} else if dfsPathNum > bfsPathNum {
+		validPaths = PathDupeCheck(append(validPaths, dfsPaths...))
+	} else {
+
+		bfscounter := 0
+
+		dfscounter := 0
+
+		for _, path := range bfs {
+
+			bfscounter += len(path)
+
+		}
+
+		for _, path := range dfs {
+			dfscounter += len(path)
+		}
+
+		if bfscounter < dfscounter {
+			validPaths = append(validPaths, bfs...)
+		} else if dfscounter < bfscounter {
+			validPaths = append(validPaths, dfs...)
+		} else {
+			validPaths = append(validPaths, bfs...)
+		}
+
+	}
+	return validPaths
+
 }
 
 func main() {
 	file := readFile(os.Args[1])
-	printAnts(file)
-	ourFarm := &antFarm{}
+	fmt.Println(file[0])
+	fmt.Println()
+
+	//--------------------------------------BFS FARM -------------------------------\\
+
+	ourBFSFarm := &antFarm{}
+	for _, v := range file[1:] {
+		if !strings.Contains(v, "-") && strings.Contains(string(v), " ") {
+			//step 2:
+			words := strings.Fields(string(v))
+			therooms = words[0]
+			ourBFSFarm.Rooms = append(ourBFSFarm.Rooms, &room{Name: therooms})
+
+		}
+
+	}
+
+	var BFSremdash string
+
+	for _, v := range file[1:] {
+		if strings.Contains(v, "-") {
+			BFSremdash = strings.Replace(v, "-", " ", 1)
+			words := regexp.MustCompile(" ").Split(BFSremdash, -1)
+			from = words[0]
+			to = words[1]
+			fmt.Println("from:", from, "	to:", to)
+			ourBFSFarm.addTunnel(from, to)
+
+		}
+
+	}
+	// ourBFSFarm.showRooms()
+	BFS(ourBFSFarm.startRoom(), *ourBFSFarm)
+
+	//--------------------------------------DFS FARM -------------------------------\\
+	ourDFSFarm := &antFarm{}
 
 	for _, v := range file[1:] {
 		if !strings.Contains(v, "-") && strings.Contains(string(v), " ") {
 			//step 2:
 			words := strings.Fields(string(v))
 			therooms = words[0]
-			ourFarm.Rooms = append(ourFarm.Rooms, &room{Name: therooms})
+			ourDFSFarm.Rooms = append(ourDFSFarm.Rooms, &room{Name: therooms})
 
 		}
 
 	}
 
-	var remdash string
+	var DFSremdash string
 
 	for _, v := range file[1:] {
 		if strings.Contains(v, "-") {
-			remdash = strings.Replace(v, "-", " ", 1)
-			words := regexp.MustCompile(" ").Split(remdash, -1)
+			DFSremdash = strings.Replace(v, "-", " ", 1)
+			words := regexp.MustCompile(" ").Split(DFSremdash, -1)
 			from = words[0]
 			to = words[1]
 			fmt.Println("from:", from, "	to:", to)
-			ourFarm.addTunnel(from, to)
+			ourDFSFarm.addTunnel(from, to)
 
 		}
 
 	}
 
-	// start := ourFarm.startRoom()
-	// end := ourFarm.endRoom()
-	// start.dfs(end)
+	fmt.Println()
 
-	ourFarm.showRooms()
+	DFS(ourDFSFarm.startRoom(), *ourDFSFarm)
+
+	// ----------------------------------------------------------------------------
+
+	arrange := pathSlice(Reassign(PathDupeCheck(PathSelection(bfsPaths, dfsPaths))))
+	rooms := Reassign(PathDupeCheck(PathSelection(bfsPaths, dfsPaths)))
+
+	a := Ants{}
+	var unmovedAnts []*Ant
+	var movedAnts []*Ant
+	counter := 1
+
+	for counter <= printAnts(file) {
+
+		number, _ := lowestInt(arrange, rooms)
+		_, route := lowestInt(arrange, rooms)
+		a.antz = append(a.antz, &Ant{Name: "L" + strconv.Itoa(counter), Path: route})
+		Increment(arrange, number)
+
+		counter++
+	}
+
+	// for _, line := range file[0] {
+	// 	fmt.Println(line)
+	// }
+	fmt.Println()
+
+	unmovedAnts = append(unmovedAnts, a.antz...)
+
+	for len(unmovedAnts) > 0 || len(movedAnts) >= 1 {
+
+		for _, ant := range unmovedAnts {
+			if len(ant.Path) == 1 {
+				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
+				ant.Path[0].Occupied = true
+				unmovedAnts = RemoveAnt(unmovedAnts, ant)
+				break
+			}
+		}
+
+		for _, ant := range unmovedAnts {
+
+			if !ant.Path[0].Occupied {
+				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
+				ant.Path[0].Occupied = true
+				movedAnts = append(movedAnts, ant)
+				unmovedAnts = RemoveAnt(unmovedAnts, ant)
+
+			}
+
+		}
+
+		fmt.Println()
+
+		for _, ant := range movedAnts {
+
+			if len(ant.Path) > 1 {
+				ant.Path[0].Occupied = false
+
+				ant.Path = ant.Path[1:]
+				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
+
+			} else {
+				movedAnts = RemoveAnt(movedAnts, ant)
+				ant.Path = []*room{}
+			}
+		}
+
+	}
+
 	fmt.Println()
 
 }
