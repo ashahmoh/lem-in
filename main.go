@@ -10,24 +10,26 @@ import (
 	"strings"
 )
 
+// GRAPH STRUCT \\
 type antFarm struct {
-	Rooms []*room
+	Rooms []*room //NODE
 }
 
+// NODE STRUCT \\
 type room struct {
-	Name     string
-	Tunnel   []*room //adjacent vertex (neighbours)
+	Name     string  //KEY
+	Tunnel   []*room //ADJACENT NODE (neighbours)
 	Visited  bool
 	Path     []*room
 	Occupied bool
 }
 
-type Ants struct {
-	antz []*Ant
+type ants struct {
+	TheAnts []*ant
 }
 
-type Ant struct {
-	Name        string
+type ant struct {
+	Name        string //KEY
 	Path        []*room
 	CurrentRoom room
 }
@@ -37,18 +39,20 @@ var (
 	to         string
 	therooms   string
 	validPaths [][]*room
-	dfsPaths   [][]*room
 	bfsPaths   [][]*room
+	dfsPaths   [][]*room
 )
 
 //=====================================BUILD THE ANT FARM ===============================\\
 
-//steps:
-//1. read the file
-//2. get the rooms
-//3. add the tunnels
-//4. find the start room
-//5. find the end room
+/*
+---- steps ----
+1. read the file
+2. get the rooms
+3. add the tunnels
+4. find the start room
+5. find the end room
+*/
 
 func readFile() []string {
 	file, _ := os.Open(os.Args[1])
@@ -152,64 +156,14 @@ func (f *antFarm) endRoom() *room {
 
 }
 
-//=====================================DFS AND BFS ALGORITHMS ===============================\\
+//==========================================================================================\\
 
-//The two algorithms will be used as a way to compare paths and select the more efficient one of the 2.
+//=====================================BFS AND DFS ALGORITHMS ===============================\\
 
-func DFS(r *room, f antFarm) {
-	eRoom := f.endRoom().Name
-	// set the current room being checked's visited status to true
-	if r.Name != f.endRoom().Name {
-		r.Visited = true
-		// range through the neighbours of the room being checked
-		for _, nbr := range r.Tunnel {
-			if !nbr.Visited {
-				/* for each neighbour that hasn't been visited,
-				- append their key to the visited slice,
-				- then apply dfs to them recursively,
-				- then append their key to their path value
-				*/
-				nbr.Path = append(r.Path, nbr)
-				if contains(nbr.Path, eRoom) {
-					dfsPaths = append(dfsPaths, nbr.Path)
-				}
-				DFS(nbr, antFarm{f.Rooms})
-			}
-		}
-	} else {
-		if len(f.startRoom().Tunnel) > 1 && !contains(f.startRoom().Tunnel, eRoom) {
-			f.startRoom().Tunnel = f.startRoom().Tunnel[1:][:]
-			DFS(f.startRoom(), antFarm{f.Rooms})
-		} else {
-		}
-	}
-	dfsPaths = PathDupeCheck(dfsPaths)
-
-}
-
-func PathDupeCheck(path [][]*room) [][]*room {
-
-	farmMap := make(map[*room][]*room)
-
-	for _, room := range path {
-		if value, ok := farmMap[room[0]]; !ok {
-			farmMap[room[0]] = room
-		} else {
-			if len(room) <= len(value) {
-				farmMap[room[0]] = room
-
-			}
-		}
-	}
-
-	var output [][]*room
-
-	for _, room := range farmMap {
-		output = append(output, room)
-	}
-
-	return output
-}
+/*The two algorithms will be used
+as a way to compare paths
+and select the efficient paths of the 2.
+*/
 
 func BFS(r *room, f antFarm) {
 
@@ -218,13 +172,16 @@ func BFS(r *room, f antFarm) {
 	//queue will add rooms to be visited to the queue in a FiFo order
 	var queue []*room
 
-	//set the start room as visited (as it is the current room for all ants at start of traversal)
+	/*set the start room as visited
+	(as it is the current room for all ants at start of traversal)*/
+
 	r.Visited = true
 
 	//initialise the queue(begin with the start room)
 	queue = append(queue, r)
 
-	// this loop checks if there is a direct tunnel between the start room and end room
+	/* this loop checks if there is a direct tunnel between
+	the start room and end room*/
 	for i, v := range f.startRoom().Tunnel {
 		if v.Name == f.endRoom().Name {
 			f.endRoom().Path = append(f.endRoom().Path, f.startRoom())
@@ -287,8 +244,63 @@ func BFS(r *room, f antFarm) {
 		v = append(v, f.endRoom())
 		bfsPaths = append(bfsPaths, v)
 	}
-	bfsPaths = PathDupeCheck(bfsPaths)
+	bfsPaths = containsDuplicatePath(bfsPaths)
 
+}
+
+func DFS(r *room, f antFarm) {
+	eRoom := f.endRoom().Name
+	// set the current room being checked's visited status to true
+	if r.Name != f.endRoom().Name {
+		r.Visited = true
+		// range through the neighbours of the room being checked
+		for _, nbr := range r.Tunnel {
+			if !nbr.Visited {
+				/* for each neighbour that hasn't been visited,
+				1. add their name to the visited slice,
+				2. pass them through the dfs func recursively,
+				3. append their name to the DFS path
+				*/
+				nbr.Path = append(r.Path, nbr)
+				if contains(nbr.Path, eRoom) {
+					dfsPaths = append(dfsPaths, nbr.Path)
+				}
+				DFS(nbr, antFarm{f.Rooms})
+			}
+		}
+	} else {
+		if len(f.startRoom().Tunnel) > 1 && !contains(f.startRoom().Tunnel, eRoom) {
+			f.startRoom().Tunnel = f.startRoom().Tunnel[1:][:]
+			DFS(f.startRoom(), antFarm{f.Rooms})
+		} else {
+		}
+	}
+	dfsPaths = containsDuplicatePath(dfsPaths)
+
+}
+
+func containsDuplicatePath(path [][]*room) [][]*room {
+
+	farmMap := make(map[*room][]*room)
+
+	for _, room := range path {
+		if value, ok := farmMap[room[0]]; !ok {
+			farmMap[room[0]] = room
+		} else {
+			if len(room) <= len(value) {
+				farmMap[room[0]] = room
+
+			}
+		}
+	}
+
+	var output [][]*room
+
+	for _, room := range farmMap {
+		output = append(output, room)
+	}
+
+	return output
 }
 
 // delete edge from starting room
@@ -327,7 +339,7 @@ func doesContainRoom(sl []*room, s string) bool {
 	return false
 }
 
-func lowestInt(a [][]int, b [][]*room) (int, []*room) {
+func getMinPathLen(a [][]int, b [][]*room) (int, []*room) {
 
 	min := 10000
 	var path []*room
@@ -356,10 +368,10 @@ func Increment(a [][]int, b int) [][]int {
 
 }
 
-func DeleteAnt(a []*Ant, b *Ant) []*Ant {
-	ret := make([]*Ant, 0)
+func DeleteAnt(a []*ant, b *ant) []*ant {
+	ret := make([]*ant, 0)
 	if len(a) == 1 {
-		return []*Ant{}
+		return []*ant{}
 	}
 	for i := 0; i < len(a); i++ {
 		if a[i].Name == b.Name {
@@ -370,7 +382,7 @@ func DeleteAnt(a []*Ant, b *Ant) []*Ant {
 	return ret
 }
 
-func pathSlice(a [][]*room) [][]int {
+func addToPath(a [][]*room) [][]int {
 	var slice [][]int
 	var s []int
 
@@ -396,13 +408,13 @@ func reassign(a [][]*room) [][]*room {
 // returns the optimal path between bfs & dfs algos
 func pathAssign(bfs [][]*room, dfs [][]*room) [][]*room {
 
-	bfsPathNum := len(bfs)
-	dfsPathNum := len(dfs)
+	bfsPathLen := len(bfs)
+	dfsPathLen := len(dfs)
 
-	if bfsPathNum > dfsPathNum {
+	if bfsPathLen > dfsPathLen {
 		validPaths = append(validPaths, bfsPaths...)
-	} else if dfsPathNum > bfsPathNum {
-		validPaths = PathDupeCheck(append(validPaths, dfsPaths...))
+	} else if dfsPathLen > bfsPathLen {
+		validPaths = containsDuplicatePath(append(validPaths, dfsPaths...))
 	} else {
 
 		bfscounter := 0
@@ -446,18 +458,24 @@ func printAnts(fname []string) int {
 
 func main() {
 	file := readFile()
+
+	//===== PRINT NUMBER OF ANTS =====\\
+
 	fmt.Println(strings.Repeat("-", 30))
 	fmt.Println("The Number of Ants:")
 	fmt.Println(strings.Repeat("-", 30))
 	fmt.Println(file[0])
 
-	//creat TWO farms:
+	///=== CREATE TWO FARMS (BFS FARM/DFS FARM) ===\\
 
-	//--------------------------------------FARM ONE: BFS FARM ----------------------------\\
+	//**** === B === F === S === *     :    * === F=== A === R === M === ****\\
+	ourBFSFarm := &antFarm{}
+
+	//=== ADD ROOMS AND PRINT THEM ===\\
 	fmt.Println(strings.Repeat("-", 30))
 	fmt.Println("The Rooms:")
 	fmt.Println(strings.Repeat("-", 30))
-	ourBFSFarm := &antFarm{}
+
 	for _, v := range file[1:] {
 		if !strings.Contains(v, "-") && strings.Contains(string(v), " ") {
 			//step 2:
@@ -469,7 +487,9 @@ func main() {
 
 	}
 
+	//=== ADD TUNNELS AND PRINT THEM ===\\
 	var BFSremdash string
+
 	fmt.Println(strings.Repeat("-", 30))
 	fmt.Println("The Tunnels:")
 	fmt.Println(strings.Repeat("-", 30))
@@ -486,16 +506,18 @@ func main() {
 		}
 
 	}
+	//============ PRINT ##start /\ ##end =======\\
 	fmt.Println(strings.Repeat("-", 30))
 	fmt.Println(strings.Repeat("=", 30))
 	fmt.Printf("##start: %s\n##end  : %s\n", ourBFSFarm.startRoom().Name, ourBFSFarm.endRoom().Name)
 	fmt.Println(strings.Repeat("=", 30))
 
+	//=== PASS FARM THROUGH BFS FUNC ===\\
 	BFS(ourBFSFarm.startRoom(), *ourBFSFarm)
 
-	//--------------------------------------FARM TWO: DFS FARM --------------------------\\
+	//**** === D === F === S === *     :    * === F=== A === R === M === ****\\
 	ourDFSFarm := &antFarm{}
-
+	//=== ADD ROOMS ===\\
 	for _, v := range file[1:] {
 		if !strings.Contains(v, "-") && strings.Contains(string(v), " ") {
 			//step 2:
@@ -506,7 +528,7 @@ func main() {
 		}
 
 	}
-
+	//=== ADD TUNNELS ===\\
 	var DFSremdash string
 
 	for _, v := range file[1:] {
@@ -520,52 +542,54 @@ func main() {
 		}
 
 	}
-
+	//=== PASS FARM THROUGH DFS FUNC. ===\\
 	DFS(ourDFSFarm.startRoom(), *ourDFSFarm)
 
-	// -------------------------------RUN THE ANTS THROUGH BOTH FARMS----------------------------\\
+	//**** === R === U === N === *     :    * === A=== N === T === S === ****\\
+
+	//=== PRINT ANTS' TAKEN PATH ===\\
 	fmt.Println(strings.Repeat("-", 30))
 	fmt.Println("The Path:")
 	fmt.Println(strings.Repeat("-", 30))
 
-	arrange := pathSlice(reassign(PathDupeCheck(pathAssign(bfsPaths, dfsPaths))))
-	rooms := reassign(PathDupeCheck(pathAssign(bfsPaths, dfsPaths)))
+	arrange := addToPath(reassign(containsDuplicatePath(pathAssign(bfsPaths, dfsPaths))))
+	rooms := reassign(containsDuplicatePath(pathAssign(bfsPaths, dfsPaths)))
 
-	a := Ants{}
-	var unmovedAnts []*Ant
-	var movedAnts []*Ant
+	a := ants{}
+	var unmovedAnts []*ant
+	var movedAnts []*ant
 	counter := 1
 
 	for counter <= printAnts(file) {
 
-		number, _ := lowestInt(arrange, rooms)
-		_, route := lowestInt(arrange, rooms)
-		a.antz = append(a.antz, &Ant{Name: "L" + strconv.Itoa(counter), Path: route})
+		number, _ := getMinPathLen(arrange, rooms)
+		_, route := getMinPathLen(arrange, rooms)
+		a.TheAnts = append(a.TheAnts, &ant{Name: "L" + strconv.Itoa(counter), Path: route})
 		Increment(arrange, number)
 
 		counter++
 	}
 
-	unmovedAnts = append(unmovedAnts, a.antz...)
+	unmovedAnts = append(unmovedAnts, a.TheAnts...)
 
 	for len(unmovedAnts) > 0 || len(movedAnts) >= 1 {
 
-		for _, ant := range unmovedAnts {
-			if len(ant.Path) == 1 {
-				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
-				ant.Path[0].Occupied = true
-				unmovedAnts = DeleteAnt(unmovedAnts, ant)
+		for _, theAnt := range unmovedAnts {
+			if len(theAnt.Path) == 1 {
+				fmt.Print(theAnt.Name, "-", theAnt.Path[0].Name, " ")
+				theAnt.Path[0].Occupied = true
+				unmovedAnts = DeleteAnt(unmovedAnts, theAnt)
 				break
 			}
 		}
 
-		for _, ant := range unmovedAnts {
+		for _, theAnt := range unmovedAnts {
 
-			if !ant.Path[0].Occupied {
-				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
-				ant.Path[0].Occupied = true
-				movedAnts = append(movedAnts, ant)
-				unmovedAnts = DeleteAnt(unmovedAnts, ant)
+			if !theAnt.Path[0].Occupied {
+				fmt.Print(theAnt.Name, "-", theAnt.Path[0].Name, " ")
+				theAnt.Path[0].Occupied = true
+				movedAnts = append(movedAnts, theAnt)
+				unmovedAnts = DeleteAnt(unmovedAnts, theAnt)
 
 			}
 
