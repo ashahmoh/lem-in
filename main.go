@@ -15,7 +15,6 @@ type antFarm struct {
 }
 
 type room struct {
-	//Id     int
 	Name     string
 	Tunnel   []*room //adjacent vertex (neighbours)
 	Visited  bool
@@ -42,28 +41,27 @@ var (
 	bfsPaths   [][]*room
 )
 
-func (f *antFarm) showRooms() {
-	//file := readFile(os.Args[1])
-	f.startRoom()
-	f.endRoom()
-	fmt.Println()
+//=====================================BUILD THE ANT FARM ===============================\\
 
-	for _, v := range f.Rooms {
-		fmt.Printf("\nRoom %v: ", v.Name)
-		for _, v := range v.Tunnel {
-			fmt.Printf("%v ", v.Name)
-		}
+//steps:
+//1. read the file
+//2. get the rooms
+//3. add the tunnels
+//4. find the start room
+//5. find the end room
+
+func readFile() []string {
+	file, _ := os.Open(os.Args[1])
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+
+	var lines []string
+
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
 	}
 
-}
-
-func contains(rList []*room, rname string) bool {
-	for _, val := range rList {
-		if rname == val.Name {
-			return true
-		}
-	}
-	return false
+	return lines
 }
 
 func (f *antFarm) getRoom(name string) *room {
@@ -104,38 +102,19 @@ func (f *antFarm) addTunnel(from, to string) {
 
 }
 
-func readFile(fname string) []string {
-	file, _ := os.Open(os.Args[1])
-	scanned := bufio.NewScanner(file)
-	scanned.Split(bufio.ScanLines)
-
-	var lines []string
-
-	for scanned.Scan() {
-		lines = append(lines, scanned.Text())
+func contains(rList []*room, rname string) bool {
+	for _, val := range rList {
+		if rname == val.Name {
+			return true
+		}
 	}
-
-	return lines
-}
-
-func printAnts(fname []string) int {
-	file := readFile(os.Args[1])
-	ant := file[0]
-	if file[0] <= "0" {
-		err := fmt.Errorf("invalid number of ants")
-		fmt.Println(err.Error())
-	}
-	theAnts, _ := strconv.Atoi(string(ant))
-	// fmt.Println(theAnts)
-	// fmt.Println()
-
-	return theAnts
+	return false
 }
 
 func (f *antFarm) startRoom() *room {
 	var start string
 
-	file := readFile(os.Args[1])
+	file := readFile()
 
 	for i := range file[1:] {
 		if file[i] == "##start" {
@@ -156,7 +135,7 @@ func (f *antFarm) startRoom() *room {
 func (f *antFarm) endRoom() *room {
 
 	var end string
-	file := readFile(os.Args[1])
+	file := readFile()
 	for i := range file[1:] {
 		if file[i] == "##end" {
 			end = file[i+1]
@@ -173,13 +152,16 @@ func (f *antFarm) endRoom() *room {
 
 }
 
+//=====================================DFS AND BFS ALGORITHMS ===============================\\
+
+//The two algorithms will be used as a way to compare paths and select the more efficient one of the 2.
+
 func DFS(r *room, f antFarm) {
-	//sRoom := f.startRoom().Name
 	eRoom := f.endRoom().Name
-	// set the room being checked visited status to true
+	// set the current room being checked's visited status to true
 	if r.Name != f.endRoom().Name {
 		r.Visited = true
-		// range through the neighbours of the r
+		// range through the neighbours of the room being checked
 		for _, nbr := range r.Tunnel {
 			if !nbr.Visited {
 				/* for each neighbour that hasn't been visited,
@@ -207,14 +189,14 @@ func DFS(r *room, f antFarm) {
 
 func PathDupeCheck(path [][]*room) [][]*room {
 
-	dataMap := make(map[*room][]*room)
+	farmMap := make(map[*room][]*room)
 
-	for _, item := range path {
-		if value, ok := dataMap[item[0]]; !ok {
-			dataMap[item[0]] = item
+	for _, room := range path {
+		if value, ok := farmMap[room[0]]; !ok {
+			farmMap[room[0]] = room
 		} else {
-			if len(item) <= len(value) {
-				dataMap[item[0]] = item
+			if len(room) <= len(value) {
+				farmMap[room[0]] = room
 
 			}
 		}
@@ -222,8 +204,8 @@ func PathDupeCheck(path [][]*room) [][]*room {
 
 	var output [][]*room
 
-	for _, value := range dataMap {
-		output = append(output, value)
+	for _, room := range farmMap {
+		output = append(output, room)
 	}
 
 	return output
@@ -233,18 +215,16 @@ func BFS(r *room, f antFarm) {
 
 	var vPaths [][]*room
 
-	//queue variable, procedurally populated with rooms yet to be visited
+	//queue will add rooms to be visited to the queue in a FiFo order
 	var queue []*room
 
-	//set start room as visited
+	//set the start room as visited (as it is the current room for all ants at start of traversal)
 	r.Visited = true
 
-	//initialise queue with start room
+	//initialise the queue(begin with the start room)
 	queue = append(queue, r)
 
-	// }
-
-	// checks if there is a link between start and end directly
+	// this loop checks if there is a direct tunnel between the start room and end room
 	for i, v := range f.startRoom().Tunnel {
 		if v.Name == f.endRoom().Name {
 			f.endRoom().Path = append(f.endRoom().Path, f.startRoom())
@@ -279,7 +259,7 @@ func BFS(r *room, f antFarm) {
 			vPaths = append(vPaths, qfront.Path)
 
 			for _, r := range qfront.Path {
-				removeTunnel(r, f)
+				deleteTunnel(r, f)
 
 			}
 			if len(f.startRoom().Tunnel) == 0 {
@@ -312,7 +292,7 @@ func BFS(r *room, f antFarm) {
 }
 
 // delete edge from starting room
-func removeTunnel(r *room, f antFarm) {
+func deleteTunnel(r *room, f antFarm) {
 	for i := 0; i < len(r.Path); i++ {
 		for _, room := range f.Rooms {
 			//	for _ , edge := range room.Tunnel
@@ -376,7 +356,7 @@ func Increment(a [][]int, b int) [][]int {
 
 }
 
-func RemoveAnt(a []*Ant, b *Ant) []*Ant {
+func DeleteAnt(a []*Ant, b *Ant) []*Ant {
 	ret := make([]*Ant, 0)
 	if len(a) == 1 {
 		return []*Ant{}
@@ -403,7 +383,7 @@ func pathSlice(a [][]*room) [][]int {
 	return slice
 }
 
-func Reassign(a [][]*room) [][]*room {
+func reassign(a [][]*room) [][]*room {
 
 	sort.Slice(a, func(i, j int) bool {
 		return len(a[i]) < len(a[j])
@@ -414,7 +394,7 @@ func Reassign(a [][]*room) [][]*room {
 }
 
 // returns the optimal path between bfs & dfs algos
-func PathSelection(bfs [][]*room, dfs [][]*room) [][]*room {
+func pathAssign(bfs [][]*room, dfs [][]*room) [][]*room {
 
 	bfsPathNum := len(bfs)
 	dfsPathNum := len(dfs)
@@ -452,13 +432,31 @@ func PathSelection(bfs [][]*room, dfs [][]*room) [][]*room {
 
 }
 
+func printAnts(fname []string) int {
+	file := readFile()
+	ant := file[0]
+	if file[0] <= "0" {
+		err := fmt.Errorf("invalid number of ants")
+		fmt.Println(err.Error())
+	}
+	theAnts, _ := strconv.Atoi(string(ant))
+
+	return theAnts
+}
+
 func main() {
-	file := readFile(os.Args[1])
+	file := readFile()
+	fmt.Println(strings.Repeat("-", 30))
+	fmt.Println("The Number of Ants:")
+	fmt.Println(strings.Repeat("-", 30))
 	fmt.Println(file[0])
-	fmt.Println()
 
-	//--------------------------------------BFS FARM -------------------------------\\
+	//creat TWO farms:
 
+	//--------------------------------------FARM ONE: BFS FARM ----------------------------\\
+	fmt.Println(strings.Repeat("-", 30))
+	fmt.Println("The Rooms:")
+	fmt.Println(strings.Repeat("-", 30))
 	ourBFSFarm := &antFarm{}
 	for _, v := range file[1:] {
 		if !strings.Contains(v, "-") && strings.Contains(string(v), " ") {
@@ -466,12 +464,15 @@ func main() {
 			words := strings.Fields(string(v))
 			therooms = words[0]
 			ourBFSFarm.Rooms = append(ourBFSFarm.Rooms, &room{Name: therooms})
-
+			fmt.Printf("Room: %s\n", therooms)
 		}
 
 	}
 
 	var BFSremdash string
+	fmt.Println(strings.Repeat("-", 30))
+	fmt.Println("The Tunnels:")
+	fmt.Println(strings.Repeat("-", 30))
 
 	for _, v := range file[1:] {
 		if strings.Contains(v, "-") {
@@ -480,15 +481,19 @@ func main() {
 			from = words[0]
 			to = words[1]
 			fmt.Println("from:", from, "	to:", to)
-			ourBFSFarm.addTunnel(from, to)
+			ourBFSFarm.addTunnel(to, from)
 
 		}
 
 	}
-	// ourBFSFarm.showRooms()
+	fmt.Println(strings.Repeat("-", 30))
+	fmt.Println(strings.Repeat("=", 30))
+	fmt.Printf("##start: %s\n##end  : %s\n", ourBFSFarm.startRoom().Name, ourBFSFarm.endRoom().Name)
+	fmt.Println(strings.Repeat("=", 30))
+
 	BFS(ourBFSFarm.startRoom(), *ourBFSFarm)
 
-	//--------------------------------------DFS FARM -------------------------------\\
+	//--------------------------------------FARM TWO: DFS FARM --------------------------\\
 	ourDFSFarm := &antFarm{}
 
 	for _, v := range file[1:] {
@@ -510,21 +515,21 @@ func main() {
 			words := regexp.MustCompile(" ").Split(DFSremdash, -1)
 			from = words[0]
 			to = words[1]
-			fmt.Println("from:", from, "	to:", to)
 			ourDFSFarm.addTunnel(from, to)
 
 		}
 
 	}
 
-	fmt.Println()
-
 	DFS(ourDFSFarm.startRoom(), *ourDFSFarm)
 
-	// ----------------------------------------------------------------------------
+	// -------------------------------RUN THE ANTS THROUGH BOTH FARMS----------------------------\\
+	fmt.Println(strings.Repeat("-", 30))
+	fmt.Println("The Path:")
+	fmt.Println(strings.Repeat("-", 30))
 
-	arrange := pathSlice(Reassign(PathDupeCheck(PathSelection(bfsPaths, dfsPaths))))
-	rooms := Reassign(PathDupeCheck(PathSelection(bfsPaths, dfsPaths)))
+	arrange := pathSlice(reassign(PathDupeCheck(pathAssign(bfsPaths, dfsPaths))))
+	rooms := reassign(PathDupeCheck(pathAssign(bfsPaths, dfsPaths)))
 
 	a := Ants{}
 	var unmovedAnts []*Ant
@@ -541,11 +546,6 @@ func main() {
 		counter++
 	}
 
-	// for _, line := range file[0] {
-	// 	fmt.Println(line)
-	// }
-	fmt.Println()
-
 	unmovedAnts = append(unmovedAnts, a.antz...)
 
 	for len(unmovedAnts) > 0 || len(movedAnts) >= 1 {
@@ -554,7 +554,7 @@ func main() {
 			if len(ant.Path) == 1 {
 				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
 				ant.Path[0].Occupied = true
-				unmovedAnts = RemoveAnt(unmovedAnts, ant)
+				unmovedAnts = DeleteAnt(unmovedAnts, ant)
 				break
 			}
 		}
@@ -565,7 +565,7 @@ func main() {
 				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
 				ant.Path[0].Occupied = true
 				movedAnts = append(movedAnts, ant)
-				unmovedAnts = RemoveAnt(unmovedAnts, ant)
+				unmovedAnts = DeleteAnt(unmovedAnts, ant)
 
 			}
 
@@ -582,9 +582,10 @@ func main() {
 				fmt.Print(ant.Name, "-", ant.Path[0].Name, " ")
 
 			} else {
-				movedAnts = RemoveAnt(movedAnts, ant)
+				movedAnts = DeleteAnt(movedAnts, ant)
 				ant.Path = []*room{}
 			}
+
 		}
 
 	}
