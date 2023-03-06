@@ -215,8 +215,9 @@ func BFS(r *room, f antFarm) {
 			}
 			vPaths = append(vPaths, qfront.Path)
 
-			for _, r := range qfront.Path {
-				deleteTunnel(r, f)
+			for _, room := range qfront.Path {
+
+				deleteTunnel(room, f)
 
 			}
 			if len(f.startRoom().Tunnel) == 0 {
@@ -444,7 +445,7 @@ func pathAssign(bfs [][]*room, dfs [][]*room) [][]*room {
 
 }
 
-func printAnts(fname []string) int {
+func printAnts() int {
 	file := readFile()
 	ant := file[0]
 	if file[0] <= "0" {
@@ -547,30 +548,31 @@ func main() {
 
 	//**** === R === U === N === *     :    * === A=== N === T === S === ****\\
 
-	//=== PRINT ANTS' TAKEN PATH ===\\
-	fmt.Println(strings.Repeat("-", 30))
-	fmt.Println("The Path:")
-	fmt.Println(strings.Repeat("-", 30))
-
 	arrange := addToPath(reassign(containsDuplicatePath(pathAssign(bfsPaths, dfsPaths))))
 	rooms := reassign(containsDuplicatePath(pathAssign(bfsPaths, dfsPaths)))
 
-	a := ants{}
+	//=== DEFINE ANTS ===\\
+	anAnt := ants{}
 	var unmovedAnts []*ant
 	var movedAnts []*ant
-	counter := 1
+	counter := 1 //each ant
 
-	for counter <= printAnts(file) {
+	for counter <= printAnts() {
 
-		number, _ := getMinPathLen(arrange, rooms)
-		_, route := getMinPathLen(arrange, rooms)
-		a.TheAnts = append(a.TheAnts, &ant{Name: "L" + strconv.Itoa(counter), Path: route})
-		Increment(arrange, number)
+		antNum, _ := getMinPathLen(arrange, rooms)
+		_, tunnelTaken := getMinPathLen(arrange, rooms)
+		anAnt.TheAnts = append(anAnt.TheAnts, &ant{Name: "L" + strconv.Itoa(counter), Path: tunnelTaken})
+		Increment(arrange, antNum)
 
 		counter++
 	}
 
-	unmovedAnts = append(unmovedAnts, a.TheAnts...)
+	unmovedAnts = append(unmovedAnts, anAnt.TheAnts...)
+
+	//=== PRINT ANTS' TAKEN PATH ===\\
+	fmt.Println(strings.Repeat("-", 30))
+	fmt.Println("The Path:")
+	fmt.Println(strings.Repeat("-", 30))
 
 	for len(unmovedAnts) > 0 || len(movedAnts) >= 1 {
 
